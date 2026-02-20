@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useRef } from 'react';
 import { Receipt, DollarSign, PiggyBank, TrendingUp, TrendingDown } from 'lucide-react';
 import { Bar } from 'react-chartjs-2';
 import {
@@ -10,18 +10,12 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 export default function Home({ expenses, incomes, onNavigate }) {
   const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-  const monthLabel = now.toLocaleString('default', { month: 'long', year: 'numeric' });
+  const chartRef = useRef(null);
 
   const expTotals = useMemo(() => getMonthlyTotals(expenses), [expenses]);
   const incTotals = useMemo(() => getMonthlyTotals(incomes), [incomes]);
   const savings = useMemo(() => getMonthlySavings(expenses, incomes), [expenses, incomes]);
 
-  const curExpense = expTotals[monthKey] || 0;
-  const curIncome = incTotals[monthKey] || 0;
-  const curSavings = savings[monthKey] || 0;
-
-  // Last 3 months keys
   const last3 = useMemo(() => {
     const keys = [];
     for (let i = 0; i < 3; i++) {
@@ -30,6 +24,18 @@ export default function Home({ expenses, incomes, onNavigate }) {
     }
     return keys.reverse();
   }, []);
+
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
+
+  const selExpense = expTotals[selectedMonth] || 0;
+  const selIncome = incTotals[selectedMonth] || 0;
+  const selSavings = savings[selectedMonth] || 0;
+
+  const selectedLabel = useMemo(() => {
+    const [y, mo] = selectedMonth.split('-');
+    return new Date(y, mo - 1).toLocaleString('default', { month: 'long', year: 'numeric' });
+  }, [selectedMonth]);
 
   const last3Labels = last3.map(m => {
     const [y, mo] = m.split('-');
@@ -47,36 +53,46 @@ export default function Home({ expenses, incomes, onNavigate }) {
     ],
   };
 
+  const handleBarClick = (event) => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    const elements = chart.getElementsAtEventForMode(event.nativeEvent, 'nearest', { intersect: true }, false);
+    if (elements.length > 0) {
+      const idx = elements[0].index;
+      setSelectedMonth(last3[idx]);
+    }
+  };
+
   return (
     <div className="page">
       <h2>Overview</h2>
-      <p className="home-subtitle">{monthLabel}</p>
+      <p className="home-subtitle">{selectedLabel}</p>
 
-      {/* Summary row */}
+      {/* Summary row - updates on bar click */}
       <div className="home-summary">
         <div className="summary-item">
           <span className="summary-label">Income</span>
-          <span className="summary-value positive">{curIncome.toFixed(0)}</span>
+          <span className="summary-value positive">{selIncome.toFixed(0)}</span>
         </div>
         <div className="summary-divider" />
         <div className="summary-item">
           <span className="summary-label">Expenses</span>
-          <span className="summary-value negative">{curExpense.toFixed(0)}</span>
+          <span className="summary-value negative">{selExpense.toFixed(0)}</span>
         </div>
         <div className="summary-divider" />
         <div className="summary-item">
           <span className="summary-label">Balance</span>
-          <span className={`summary-value ${curSavings >= 0 ? 'positive' : 'negative'}`}>
-            {curSavings >= 0 ? '+' : ''}{curSavings.toFixed(0)}
+          <span className={`summary-value ${selSavings >= 0 ? 'positive' : 'negative'}`}>
+            {selSavings >= 0 ? '+' : ''}{selSavings.toFixed(0)}
           </span>
         </div>
       </div>
 
       {/* Last 3 months chart */}
       <div className="card">
-        <h3>Last 3 Months</h3>
+        <h3>Last 3 Months <span className="hint">(tap bar to select)</span></h3>
         <div className="chart-container-sm">
-          <Bar data={barData}
+          <Bar ref={chartRef} data={barData}
             options={{
               responsive: true, maintainAspectRatio: false,
               plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 8, font: { size: 10 } } } },
@@ -85,6 +101,7 @@ export default function Home({ expenses, incomes, onNavigate }) {
                 x: { grid: { display: false } },
               },
             }}
+            onClick={handleBarClick}
           />
         </div>
       </div>
@@ -99,7 +116,7 @@ export default function Home({ expenses, incomes, onNavigate }) {
           </div>
           <div className="home-card-amount">
             <TrendingDown size={14} />
-            <span>{curExpense.toFixed(0)}</span>
+            <span>{selExpense.toFixed(0)}</span>
           </div>
         </button>
 
@@ -111,7 +128,7 @@ export default function Home({ expenses, incomes, onNavigate }) {
           </div>
           <div className="home-card-amount income-amount">
             <TrendingUp size={14} />
-            <span>{curIncome.toFixed(0)}</span>
+            <span>{selIncome.toFixed(0)}</span>
           </div>
         </button>
 
@@ -121,9 +138,9 @@ export default function Home({ expenses, incomes, onNavigate }) {
             <span className="home-card-title">Savings</span>
             <span className="home-card-desc">Monitor your money keeping</span>
           </div>
-          <div className={`home-card-amount ${curSavings >= 0 ? 'positive' : 'negative'}`}>
+          <div className={`home-card-amount ${selSavings >= 0 ? 'positive' : 'negative'}`}>
             <PiggyBank size={14} />
-            <span>{curSavings >= 0 ? '+' : ''}{curSavings.toFixed(0)}</span>
+            <span>{selSavings >= 0 ? '+' : ''}{selSavings.toFixed(0)}</span>
           </div>
         </button>
       </div>

@@ -1,38 +1,38 @@
 import { useState } from 'react';
 import { Download, Upload, Trash2, Sun, Moon } from 'lucide-react';
-import { exportData, importData, saveData } from '../utils/storage';
+import { exportToCsv, importFromCsv, saveData } from '../utils/storage';
 
 export default function SettingsView({ onDataChange, darkMode, onToggleTheme }) {
   const [msg, setMsg] = useState('');
 
   const handleExport = () => {
-    const json = exportData();
-    const blob = new Blob([json], { type: 'application/json' });
+    const csv = exportToCsv();
+    const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `expenses_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `finance_data_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    setMsg('Data exported!');
+    setMsg('Data exported as CSV!');
     setTimeout(() => setMsg(''), 2000);
   };
 
   const handleImport = () => {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.json';
+    input.accept = '.csv';
     input.onchange = (e) => {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = (ev) => {
         try {
-          const data = importData(ev.target.result);
+          const data = importFromCsv(ev.target.result);
           onDataChange(data);
-          setMsg('Data imported successfully!');
-        } catch {
-          setMsg('Error: Invalid file format.');
+          setMsg('CSV imported successfully!');
+        } catch (err) {
+          setMsg('Error: ' + (err.message || 'Invalid CSV format.'));
         }
         setTimeout(() => setMsg(''), 3000);
       };
@@ -74,10 +74,10 @@ export default function SettingsView({ onDataChange, darkMode, onToggleTheme }) 
         <h3>Data Management</h3>
         <div className="settings-actions">
           <button className="btn-secondary" onClick={handleExport}>
-            <Download size={18} /> Export Data (JSON)
+            <Download size={18} /> Export Data (CSV)
           </button>
           <button className="btn-secondary" onClick={handleImport}>
-            <Upload size={18} /> Import Data (JSON)
+            <Upload size={18} /> Import Data (CSV)
           </button>
           <button className="btn-danger" onClick={handleClear}>
             <Trash2 size={18} /> Clear All Data
@@ -87,9 +87,17 @@ export default function SettingsView({ onDataChange, darkMode, onToggleTheme }) 
       </div>
 
       <div className="card">
+        <h3>CSV Format</h3>
+        <p className="about-text">
+          Export/import uses CSV with columns: type, name, amount, category, date.
+          Type is either "expense" or "income". Import adds to existing data.
+        </p>
+      </div>
+
+      <div className="card">
         <h3>About</h3>
         <p className="about-text">
-          Expense Tracker PWA. All data is stored locally on your device.
+          Finance Tracker PWA. All data is stored locally on your device.
           No server, no account required. Install on your home screen for the best experience.
         </p>
       </div>

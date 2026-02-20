@@ -132,16 +132,67 @@ export function getMonthlySavings(expenses, incomes) {
   return result;
 }
 
-export function exportData() {
-  return JSON.stringify(loadData(), null, 2);
+export function exportToCsv() {
+  const data = loadData();
+  const header = 'type,name,amount,category,date';
+  const rows = [];
+  data.expenses.forEach(e => {
+    rows.push(`expense,"${e.name.replace(/"/g, '""')}",${e.amount},"${e.category}",${e.date}`);
+  });
+  data.incomes.forEach(i => {
+    rows.push(`income,"${i.name.replace(/"/g, '""')}",${i.amount},"${i.category}",${i.date}`);
+  });
+  return [header, ...rows].join('\n');
 }
 
-export function importData(jsonStr) {
-  const data = JSON.parse(jsonStr);
-  if (!data.expenses || !Array.isArray(data.expenses)) {
-    throw new Error('Invalid data format');
+export function importFromCsv(csvStr) {
+  const lines = csvStr.trim().split('\n');
+  if (lines.length < 2) throw new Error('Empty CSV');
+
+  const header = lines[0].toLowerCase();
+  if (!header.includes('type') || !header.includes('amount')) {
+    throw new Error('Invalid CSV format. Expected: type,name,amount,category,date');
   }
-  if (!data.incomes) data.incomes = [];
+
+  const data = loadData();
+
+  for (let i = 1; i < lines.length; i++) {
+    const parts = parseCsvLine(lines[i]);
+    if (parts.length < 5) continue;
+
+    const [type, name, amountStr, category, date] = parts;
+    const amount = parseFloat(amountStr);
+    if (isNaN(amount) || !name) continue;
+
+    const entry = { id: crypto.randomUUID(), name, amount, category, date };
+
+    if (type.toLowerCase() === 'income') {
+      data.incomes.push(entry);
+    } else {
+      data.expenses.push(entry);
+    }
+  }
+
   saveData(data);
   return data;
+}
+
+function parseCsvLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') { current += '"'; i++; }
+      else { inQuotes = !inQuotes; }
+    } else if (ch === ',' && !inQuotes) {
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  result.push(current.trim());
+  return result;
 }
