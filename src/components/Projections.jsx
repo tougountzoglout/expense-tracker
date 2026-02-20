@@ -9,19 +9,14 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-function detectSalary(incomes) {
-  const salary14 = incomes.filter(i => i.category === 'Salary (14-month)');
-  const salary12 = incomes.filter(i => i.category === 'Salary (12-month)');
-
-  if (salary14.length > 0 && salary14.length >= salary12.length) {
-    const avg = salary14.reduce((s, i) => s + i.amount, 0) / salary14.length;
-    return { type: '14', monthly: avg };
-  }
-  if (salary12.length > 0) {
-    const avg = salary12.reduce((s, i) => s + i.amount, 0) / salary12.length;
-    return { type: '12', monthly: avg };
-  }
-  return { type: 'none', monthly: 0 };
+function detectSalaries(incomes) {
+  const s14entries = incomes.filter(i => i.category === 'Salary (14-month)');
+  const s12entries = incomes.filter(i => i.category === 'Salary (12-month)');
+  const salary14 = s14entries.length > 0
+    ? s14entries.reduce((s, i) => s + i.amount, 0) / s14entries.length : 0;
+  const salary12 = s12entries.length > 0
+    ? s12entries.reduce((s, i) => s + i.amount, 0) / s12entries.length : 0;
+  return { salary14, salary12 };
 }
 
 export default function Projections({ expenses, incomes, deposits }) {
@@ -29,7 +24,7 @@ export default function Projections({ expenses, incomes, deposits }) {
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
-  const salary = useMemo(() => detectSalary(incomes), [incomes]);
+  const salaries = useMemo(() => detectSalaries(incomes), [incomes]);
   const nonSalaryIncomes = useMemo(
     () => incomes.filter(i => i.category !== 'Salary (14-month)' && i.category !== 'Salary (12-month)'),
     [incomes]
@@ -42,16 +37,22 @@ export default function Projections({ expenses, incomes, deposits }) {
   const avgExpense = expAvg.monthly;
   const avgOtherIncome = nonSalaryIncAvg.monthly;
   const avgDeposit = depAvg.monthly;
+  const hasSalary = salaries.salary14 > 0 || salaries.salary12 > 0;
 
-  // For 14-month salary: extra half-salary in April (Easter), June (summer), full in December (Christmas)
   const getMonthlyIncome = (monthIdx) => {
-    let salaryAmount = salary.monthly;
-    if (salary.type === '14' && salary.monthly > 0) {
-      if (monthIdx === 3) salaryAmount += salary.monthly * 0.5; // Easter bonus
-      if (monthIdx === 5) salaryAmount += salary.monthly * 0.5; // Summer bonus
-      if (monthIdx === 11) salaryAmount += salary.monthly;       // Christmas bonus
+    // 12-month salary: same every month
+    let total = salaries.salary12;
+
+    // 14-month salary: base + bonuses in Apr (Easter), Jun (summer), Dec (Christmas)
+    let s14 = salaries.salary14;
+    if (s14 > 0) {
+      if (monthIdx === 3) s14 += salaries.salary14 * 0.5;  // Easter bonus (half)
+      if (monthIdx === 5) s14 += salaries.salary14 * 0.5;  // Summer bonus (half)
+      if (monthIdx === 11) s14 += salaries.salary14;         // Christmas bonus (full)
     }
-    return (salary.type !== 'none' ? salaryAmount : 0) + avgOtherIncome;
+    total += s14;
+
+    return total + avgOtherIncome;
   };
 
   const months = [];
@@ -107,16 +108,16 @@ export default function Projections({ expenses, incomes, deposits }) {
       <p className="home-subtitle">12-month forecast from {MONTH_NAMES[currentMonth]} {currentYear}</p>
 
       <div className="card">
-        <h3>Detected Salary</h3>
+        <h3>Detected Salaries</h3>
         <div className="projection-config">
-          {salary.type !== 'none' ? (
+          {hasSalary ? (
             <>
-              <span>Type: <strong>{salary.type}-month salary</strong></span>
-              <span>Base: <strong>{salary.monthly.toFixed(0)}/mo</strong></span>
-              {avgOtherIncome > 0 && <span>Other income: <strong>{avgOtherIncome.toFixed(0)}/mo avg</strong></span>}
+              {salaries.salary14 > 0 && <span>14-month: <strong>{salaries.salary14.toFixed(0)}/mo</strong></span>}
+              {salaries.salary12 > 0 && <span>12-month: <strong>{salaries.salary12.toFixed(0)}/mo</strong></span>}
+              {avgOtherIncome > 0 && <span>Other: <strong>{avgOtherIncome.toFixed(0)}/mo avg</strong></span>}
             </>
           ) : (
-            <span className="hint">Add income entries with category "Salary (14-month)" or "Salary (12-month)" for accurate projections</span>
+            <span className="hint">Add income with category "Salary (14-month)" or "Salary (12-month)" for accurate projections</span>
           )}
         </div>
       </div>
