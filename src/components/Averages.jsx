@@ -3,7 +3,7 @@ import { Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, Tooltip
 } from 'chart.js';
-import { getAverages, getUniqueMonths, getMonthlyTotals, getCategoryTotals, getMonthlySavings } from '../utils/storage';
+import { getAverages, getUniqueMonths, getMonthlyTotals, getCategoryTotals, getMonthlySavings, getMonthlyAvailable } from '../utils/storage';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
@@ -13,21 +13,25 @@ const COLORS = [
   '#6c757d', '#495057',
 ];
 
-export default function Averages({ expenses, incomes }) {
+export default function Averages({ expenses, incomes, deposits = [] }) {
   const expAvg = useMemo(() => getAverages(expenses), [expenses]);
   const incAvg = useMemo(() => getAverages(incomes), [incomes]);
+  const depAvg = useMemo(() => getAverages(deposits), [deposits]);
 
   const expMonthlyTotals = useMemo(() => getMonthlyTotals(expenses), [expenses]);
   const incMonthlyTotals = useMemo(() => getMonthlyTotals(incomes), [incomes]);
+  const depMonthlyTotals = useMemo(() => getMonthlyTotals(deposits), [deposits]);
   const savings = useMemo(() => getMonthlySavings(expenses, incomes), [expenses, incomes]);
+  const availableByMonth = useMemo(() => getMonthlyAvailable(expenses, incomes, deposits), [expenses, incomes, deposits]);
 
   const allMonths = useMemo(() => {
-    const set = new Set([...getUniqueMonths(expenses), ...getUniqueMonths(incomes)]);
+    const set = new Set([...getUniqueMonths(expenses), ...getUniqueMonths(incomes), ...getUniqueMonths(deposits)]);
     return Array.from(set).sort();
-  }, [expenses, incomes]);
+  }, [expenses, incomes, deposits]);
 
   const totalExp = expenses.reduce((s, e) => s + e.amount, 0);
   const totalInc = incomes.reduce((s, e) => s + e.amount, 0);
+  const totalDep = deposits.reduce((s, e) => s + e.amount, 0);
   const totalSaved = Object.values(savings).reduce((s, v) => s + v, 0);
   const savingsRate = totalInc > 0 ? (totalSaved / totalInc * 100) : 0;
 
@@ -73,12 +77,12 @@ export default function Averages({ expenses, incomes }) {
           <span className="stat-value">{totalInc.toFixed(0)}</span>
         </div>
         <div className="card stat-card">
-          <span className="stat-label">Savings Rate</span>
-          <span className={`stat-value ${savingsRate >= 0 ? 'positive' : 'negative'}`}>{savingsRate.toFixed(1)}%</span>
+          <span className="stat-label">Total Deposited</span>
+          <span className="stat-value" style={{ color: '#457b9d' }}>{totalDep.toFixed(0)}</span>
         </div>
         <div className="card stat-card">
-          <span className="stat-label">Total Saved</span>
-          <span className={`stat-value ${totalSaved >= 0 ? 'positive' : 'negative'}`}>{totalSaved.toFixed(0)}</span>
+          <span className="stat-label">Avg Monthly Deposit</span>
+          <span className="stat-value" style={{ color: '#457b9d' }}>{depAvg.monthly.toFixed(0)}</span>
         </div>
         <div className="card stat-card">
           <span className="stat-label">Cheapest Month</span>
@@ -144,7 +148,7 @@ export default function Averages({ expenses, incomes }) {
         </div>
       )}
 
-      {/* Savings monthly detail */}
+      {/* Monthly detail with all 4 values */}
       <div className="card">
         <h3>Monthly Balance History</h3>
         <div className="breakdown-list">
@@ -153,15 +157,16 @@ export default function Averages({ expenses, incomes }) {
             const label = new Date(y, mo - 1).toLocaleString('default', { month: 'short', year: '2-digit' });
             const inc = incMonthlyTotals[m] || 0;
             const exp = expMonthlyTotals[m] || 0;
-            const net = inc - exp;
+            const dep = depMonthlyTotals[m] || 0;
+            const avail = availableByMonth[m] || 0;
             return (
               <div key={m} className="breakdown-row savings-row">
                 <div>
                   <span className="savings-month">{label}</span>
-                  <span className="savings-detail">In: {inc.toFixed(0)} | Out: {exp.toFixed(0)}</span>
+                  <span className="savings-detail">In: {inc.toFixed(0)} | Out: {exp.toFixed(0)} | Save: {dep.toFixed(0)}</span>
                 </div>
-                <span className={`breakdown-amount ${net >= 0 ? 'positive' : 'negative'}`}>
-                  {net >= 0 ? '+' : ''}{net.toFixed(0)}
+                <span className={`breakdown-amount ${avail >= 0 ? 'positive' : 'negative'}`}>
+                  {avail >= 0 ? '+' : ''}{avail.toFixed(0)}
                 </span>
               </div>
             );

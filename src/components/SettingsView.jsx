@@ -1,11 +1,32 @@
-import { useState } from 'react';
-import { Download, Upload, Trash2, Sun, Moon, LogOut } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Download, Upload, Trash2, Sun, Moon, LogOut, Save } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { exportToCsv, importFromCsv, clearAllData } from '../utils/db';
+import { exportToCsv, importFromCsv, clearAllData, updatePreferences } from '../utils/db';
 
-export default function SettingsView({ darkMode, onToggleTheme, onDataReload }) {
+export default function SettingsView({ darkMode, onToggleTheme, onDataReload, preferences }) {
   const { user, signOut } = useAuth();
   const [msg, setMsg] = useState('');
+  const [salaryType, setSalaryType] = useState(preferences?.salary_type || '14');
+  const [monthlySalary, setMonthlySalary] = useState(preferences?.monthly_salary || '');
+
+  useEffect(() => {
+    setSalaryType(preferences?.salary_type || '14');
+    setMonthlySalary(preferences?.monthly_salary || '');
+  }, [preferences]);
+
+  const handleSavePrefs = async () => {
+    try {
+      await updatePreferences({
+        salary_type: salaryType,
+        monthly_salary: parseFloat(monthlySalary) || 0,
+      });
+      await onDataReload();
+      setMsg('Preferences saved!');
+    } catch {
+      setMsg('Failed to save preferences.');
+    }
+    setTimeout(() => setMsg(''), 2000);
+  };
 
   const handleExport = async () => {
     try {
@@ -18,9 +39,7 @@ export default function SettingsView({ darkMode, onToggleTheme, onDataReload }) 
       a.click();
       URL.revokeObjectURL(url);
       setMsg('Data exported as CSV!');
-    } catch {
-      setMsg('Export failed.');
-    }
+    } catch { setMsg('Export failed.'); }
     setTimeout(() => setMsg(''), 2000);
   };
 
@@ -36,10 +55,8 @@ export default function SettingsView({ darkMode, onToggleTheme, onDataReload }) 
         try {
           await importFromCsv(ev.target.result);
           await onDataReload();
-          setMsg('CSV imported successfully!');
-        } catch (err) {
-          setMsg('Error: ' + (err.message || 'Invalid CSV.'));
-        }
+          setMsg('CSV imported!');
+        } catch (err) { setMsg('Error: ' + (err.message || 'Invalid CSV.')); }
         setTimeout(() => setMsg(''), 3000);
       };
       reader.readAsText(file);
@@ -48,14 +65,9 @@ export default function SettingsView({ darkMode, onToggleTheme, onDataReload }) 
   };
 
   const handleClear = async () => {
-    if (confirm('Are you sure? This will delete ALL your data.')) {
-      try {
-        await clearAllData();
-        await onDataReload();
-        setMsg('All data cleared.');
-      } catch {
-        setMsg('Failed to clear data.');
-      }
+    if (confirm('Delete ALL your data (expenses, income, savings)?')) {
+      try { await clearAllData(); await onDataReload(); setMsg('All data cleared.'); }
+      catch { setMsg('Failed.'); }
       setTimeout(() => setMsg(''), 2000);
     }
   };
@@ -73,34 +85,47 @@ export default function SettingsView({ darkMode, onToggleTheme, onDataReload }) 
       </div>
 
       <div className="card">
+        <h3>Salary Configuration</h3>
+        <div className="expense-form">
+          <div className="form-group">
+            <label>Salary Type</label>
+            <select value={salaryType} onChange={e => setSalaryType(e.target.value)}>
+              <option value="12">12-month salary</option>
+              <option value="14">14-month salary (GR standard)</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Monthly Net Salary (EUR)</label>
+            <input type="number" step="0.01" min="0" value={monthlySalary}
+              onChange={e => setMonthlySalary(e.target.value)} placeholder="e.g. 1500" />
+          </div>
+          <p className="about-text">
+            {salaryType === '14'
+              ? '14-month: extra half-salary in April (Easter) and June (summer), plus full bonus in December (Christmas).'
+              : '12-month: equal salary every month, no bonus months.'}
+          </p>
+          <button className="btn-primary" onClick={handleSavePrefs}>
+            <Save size={18} /> Save Preferences
+          </button>
+        </div>
+      </div>
+
+      <div className="card">
         <h3>Appearance</h3>
         <button className="btn-secondary full-width" onClick={onToggleTheme}>
           {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-          {darkMode ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          {darkMode ? 'Light Mode' : 'Dark Mode'}
         </button>
       </div>
 
       <div className="card">
         <h3>Data Management</h3>
         <div className="settings-actions">
-          <button className="btn-secondary" onClick={handleExport}>
-            <Download size={18} /> Export Data (CSV)
-          </button>
-          <button className="btn-secondary" onClick={handleImport}>
-            <Upload size={18} /> Import Data (CSV)
-          </button>
-          <button className="btn-danger" onClick={handleClear}>
-            <Trash2 size={18} /> Clear All Data
-          </button>
+          <button className="btn-secondary" onClick={handleExport}><Download size={18} /> Export CSV</button>
+          <button className="btn-secondary" onClick={handleImport}><Upload size={18} /> Import CSV</button>
+          <button className="btn-danger" onClick={handleClear}><Trash2 size={18} /> Clear All Data</button>
         </div>
         {msg && <div className="success-msg">{msg}</div>}
-      </div>
-
-      <div className="card">
-        <h3>About</h3>
-        <p className="about-text">
-          Finance Tracker. Data is synced to the cloud and accessible from any device.
-        </p>
       </div>
     </div>
   );

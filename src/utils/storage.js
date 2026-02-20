@@ -132,6 +132,18 @@ export function getMonthlySavings(expenses, incomes) {
   return result;
 }
 
+export function getMonthlyAvailable(expenses, incomes, deposits) {
+  const expTotals = getMonthlyTotals(expenses);
+  const incTotals = getMonthlyTotals(incomes);
+  const depTotals = getMonthlyTotals(deposits);
+  const allKeys = new Set([...Object.keys(expTotals), ...Object.keys(incTotals), ...Object.keys(depTotals)]);
+  const result = {};
+  allKeys.forEach(key => {
+    result[key] = (incTotals[key] || 0) - (expTotals[key] || 0) - (depTotals[key] || 0);
+  });
+  return result;
+}
+
 export function exportToCsv() {
   const data = loadData();
   const header = 'type,name,amount,category,date';

@@ -501,14 +501,23 @@ body {
   background: rgba(42, 157, 143, 0.12);
   color: #2a9d8f;
 }
-.home-card-savings .home-card-icon {
+.home-card-deposit .home-card-icon {
+  background: rgba(69, 123, 157, 0.12);
+  color: #457b9d;
+}
+.home-card-available .home-card-icon {
   background: rgba(27, 58, 75, 0.12);
   color: var(--primary-light);
 }
-[data-theme="dark"] .home-card-savings .home-card-icon {
+[data-theme="dark"] .home-card-deposit .home-card-icon {
+  background: rgba(69, 123, 157, 0.15);
+  color: #6ba0c0;
+}
+[data-theme="dark"] .home-card-available .home-card-icon {
   background: rgba(42, 157, 143, 0.12);
   color: var(--accent);
 }
+.deposit-amount { color: #457b9d !important; }
 .home-card-body {
   flex: 1;
   min-width: 0;
@@ -662,4 +671,22 @@ body {
 }
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* Projection config */
+.projection-config {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text);
+}
+.projection-config strong { color: var(--accent); }
+
+/* 4-column home summary override */
+.home-summary-4 .summary-value {
+  font-size: 15px;
+}
+.home-summary-4 .summary-label {
+  font-size: 9px;
 }

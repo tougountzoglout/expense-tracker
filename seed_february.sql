@@ -1,0 +1,15 @@
+INSERT INTO expenses (user_id, name, amount, category, date) VALUES
+('11b56fa5-e645-4590-bc73-95cb7649203b', 'Ethniki', 150.00, 'Insurance', '2026-02-15'),
+('11b56fa5-e645-4590-bc73-95cb7649203b', 'Vodafone (Mobile)', 72.16, 'Telecom', '2026-02-15'),
+('11b56fa5-e645-4590-bc73-95cb7649203b', 'Vodafone (Internet)', 88.88, 'Telecom', '2026-02-15'),
+('11b56fa5-e645-4590-bc73-95cb7649203b', 'Eydap', 35.55, 'Utilities', '2026-02-15'),
+('11b56fa5-e645-4590-bc73-95cb7649203b', 'Zenith Electricity', 75.52, 'Energy', '2026-02-15'),
+('11b56fa5-e645-4590-bc73-95cb7649203b', 'Paidikos Stathmos (Monthly)', 80.00, 'Childcare', '2026-02-15'),
+('11b56fa5-e645-4590-bc73-95cb7649203b', 'Gym', 120.00, 'Fitness', '2026-02-15'),
+('11b56fa5-e645-4590-bc73-95cb7649203b', 'Replayce', 90.00, 'Subscription', '2026-02-15'),
+('11b56fa5-e645-4590-bc73-95cb7649203b', 'Zenith Gas', 35.00, 'Energy', '2026-02-15'),
+('11b56fa5-e645-4590-bc73-95cb7649203b', 'Koinoxrhsta', 100.00, 'Building', '2026-02-15'),
+('11b56fa5-e645-4590-bc73-95cb7649203b', 'Super Market', 400.00, 'Groceries', '2026-02-15'),
+('11b56fa5-e645-4590-bc73-95cb7649203b', 'Local Market', 200.00, 'Groceries', '2026-02-15'),
+('11b56fa5-e645-4590-bc73-95cb7649203b', 'Meat', 100.00, 'Food', '2026-02-15'),
+('11b56fa5-e645-4590-bc73-95cb7649203b', 'Paidikos Stathmos (Tuition)', 350.00, 'Childcare', '2026-02-15');
