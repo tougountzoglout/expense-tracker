@@ -9,36 +9,51 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-export default function Projections({ expenses, incomes, deposits, preferences }) {
+function detectSalary(incomes) {
+  const salary14 = incomes.filter(i => i.category === 'Salary (14-month)');
+  const salary12 = incomes.filter(i => i.category === 'Salary (12-month)');
+
+  if (salary14.length > 0 && salary14.length >= salary12.length) {
+    const avg = salary14.reduce((s, i) => s + i.amount, 0) / salary14.length;
+    return { type: '14', monthly: avg };
+  }
+  if (salary12.length > 0) {
+    const avg = salary12.reduce((s, i) => s + i.amount, 0) / salary12.length;
+    return { type: '12', monthly: avg };
+  }
+  return { type: 'none', monthly: 0 };
+}
+
+export default function Projections({ expenses, incomes, deposits }) {
   const now = new Date();
-  const currentMonth = now.getMonth(); // 0-indexed
+  const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
 
-  const salaryType = preferences?.salary_type || '14';
-  const monthlySalary = parseFloat(preferences?.monthly_salary) || 0;
+  const salary = useMemo(() => detectSalary(incomes), [incomes]);
+  const nonSalaryIncomes = useMemo(
+    () => incomes.filter(i => i.category !== 'Salary (14-month)' && i.category !== 'Salary (12-month)'),
+    [incomes]
+  );
 
   const expAvg = useMemo(() => getAverages(expenses), [expenses]);
-  const incAvg = useMemo(() => getAverages(incomes), [incomes]);
+  const nonSalaryIncAvg = useMemo(() => getAverages(nonSalaryIncomes), [nonSalaryIncomes]);
   const depAvg = useMemo(() => getAverages(deposits), [deposits]);
 
   const avgExpense = expAvg.monthly;
-  const avgIncome = incAvg.monthly;
+  const avgOtherIncome = nonSalaryIncAvg.monthly;
   const avgDeposit = depAvg.monthly;
 
-  // For 14-month salary: extra half-salary in month index 3 (April/Easter) and 11 (December/Christmas)
-  // These are approximate Greek standard bonus months
+  // For 14-month salary: extra half-salary in April (Easter), June (summer), full in December (Christmas)
   const getMonthlyIncome = (monthIdx) => {
-    if (salaryType === '14' && monthlySalary > 0) {
-      const base = monthlySalary;
-      if (monthIdx === 3) return base + base * 0.5; // Easter bonus (half)
-      if (monthIdx === 5) return base + base * 0.5; // Summer bonus (half)
-      if (monthIdx === 11) return base;              // Christmas bonus (full)
-      return base;
+    let salaryAmount = salary.monthly;
+    if (salary.type === '14' && salary.monthly > 0) {
+      if (monthIdx === 3) salaryAmount += salary.monthly * 0.5; // Easter bonus
+      if (monthIdx === 5) salaryAmount += salary.monthly * 0.5; // Summer bonus
+      if (monthIdx === 11) salaryAmount += salary.monthly;       // Christmas bonus
     }
-    return avgIncome;
+    return (salary.type !== 'none' ? salaryAmount : 0) + avgOtherIncome;
   };
 
-  // Build 12-month projection
   const months = [];
   let cumulativeAvailable = 0;
   let cumulativeSaved = 0;
@@ -92,11 +107,17 @@ export default function Projections({ expenses, incomes, deposits, preferences }
       <p className="home-subtitle">12-month forecast from {MONTH_NAMES[currentMonth]} {currentYear}</p>
 
       <div className="card">
-        <h3>Salary Configuration</h3>
+        <h3>Detected Salary</h3>
         <div className="projection-config">
-          <span>Type: <strong>{salaryType}-month salary</strong></span>
-          {monthlySalary > 0 && <span>Base: <strong>{monthlySalary.toFixed(0)}/mo</strong></span>}
-          {monthlySalary === 0 && <span className="hint">Set salary in Settings for accurate projections</span>}
+          {salary.type !== 'none' ? (
+            <>
+              <span>Type: <strong>{salary.type}-month salary</strong></span>
+              <span>Base: <strong>{salary.monthly.toFixed(0)}/mo</strong></span>
+              {avgOtherIncome > 0 && <span>Other income: <strong>{avgOtherIncome.toFixed(0)}/mo avg</strong></span>}
+            </>
+          ) : (
+            <span className="hint">Add income entries with category "Salary (14-month)" or "Salary (12-month)" for accurate projections</span>
+          )}
         </div>
       </div>
 

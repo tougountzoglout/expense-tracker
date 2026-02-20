@@ -20,7 +20,7 @@ const CATEGORIES = [
   'Subscription', 'Energy', 'Building', 'Groceries', 'Food', 'Other'
 ];
 const INCOME_CATEGORIES = [
-  'Salary', 'Freelance', 'Investments', 'Rental', 'Bonus', 'Other'
+  'Salary (14-month)', 'Salary (12-month)', 'Freelance', 'Investments', 'Rental', 'Bonus', 'Other'
 ];
 const DEPOSIT_CATEGORIES = [
   'Monthly Transfer', 'Bonus Deposit', 'Lump Sum', 'Other'
@@ -106,14 +106,14 @@ function AppContent() {
           <Dashboard expenses={expenses} incomes={incomes} deposits={deposits} />
         )}
         {page === 'projections' && (
-          <Projections expenses={expenses} incomes={incomes} deposits={deposits} preferences={preferences} />
+          <Projections expenses={expenses} incomes={incomes} deposits={deposits} />
         )}
         {page === 'stats' && (
           <Averages expenses={expenses} incomes={incomes} deposits={deposits} />
         )}
         {page === 'settings' && (
           <SettingsView darkMode={darkMode} onToggleTheme={() => setDarkMode(!darkMode)}
-            onDataReload={loadAll} preferences={preferences} />
+            onDataReload={loadAll} />
         )}
       </main>
       <NavBar active={navTab} onNavigate={setPage} />

@@ -1,32 +1,11 @@
-import { useState, useEffect } from 'react';
-import { Download, Upload, Trash2, Sun, Moon, LogOut, Save } from 'lucide-react';
+import { useState } from 'react';
+import { Download, Upload, Trash2, Sun, Moon, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { exportToCsv, importFromCsv, clearAllData, updatePreferences } from '../utils/db';
+import { exportToCsv, importFromCsv, clearAllData } from '../utils/db';
 
-export default function SettingsView({ darkMode, onToggleTheme, onDataReload, preferences }) {
+export default function SettingsView({ darkMode, onToggleTheme, onDataReload }) {
   const { user, signOut } = useAuth();
   const [msg, setMsg] = useState('');
-  const [salaryType, setSalaryType] = useState(preferences?.salary_type || '14');
-  const [monthlySalary, setMonthlySalary] = useState(preferences?.monthly_salary || '');
-
-  useEffect(() => {
-    setSalaryType(preferences?.salary_type || '14');
-    setMonthlySalary(preferences?.monthly_salary || '');
-  }, [preferences]);
-
-  const handleSavePrefs = async () => {
-    try {
-      await updatePreferences({
-        salary_type: salaryType,
-        monthly_salary: parseFloat(monthlySalary) || 0,
-      });
-      await onDataReload();
-      setMsg('Preferences saved!');
-    } catch {
-      setMsg('Failed to save preferences.');
-    }
-    setTimeout(() => setMsg(''), 2000);
-  };
 
   const handleExport = async () => {
     try {
@@ -82,32 +61,6 @@ export default function SettingsView({ darkMode, onToggleTheme, onDataReload, pr
         <button className="btn-danger full-width" onClick={signOut}>
           <LogOut size={18} /> Sign Out
         </button>
-      </div>
-
-      <div className="card">
-        <h3>Salary Configuration</h3>
-        <div className="expense-form">
-          <div className="form-group">
-            <label>Salary Type</label>
-            <select value={salaryType} onChange={e => setSalaryType(e.target.value)}>
-              <option value="12">12-month salary</option>
-              <option value="14">14-month salary (GR standard)</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Monthly Net Salary (EUR)</label>
-            <input type="number" step="0.01" min="0" value={monthlySalary}
-              onChange={e => setMonthlySalary(e.target.value)} placeholder="e.g. 1500" />
-          </div>
-          <p className="about-text">
-            {salaryType === '14'
-              ? '14-month: extra half-salary in April (Easter) and June (summer), plus full bonus in December (Christmas).'
-              : '12-month: equal salary every month, no bonus months.'}
-          </p>
-          <button className="btn-primary" onClick={handleSavePrefs}>
-            <Save size={18} /> Save Preferences
-          </button>
-        </div>
       </div>
 
       <div className="card">
