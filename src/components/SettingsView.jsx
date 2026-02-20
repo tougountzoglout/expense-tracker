@@ -1,20 +1,26 @@
 import { useState } from 'react';
-import { Download, Upload, Trash2, Sun, Moon } from 'lucide-react';
-import { exportToCsv, importFromCsv, saveData } from '../utils/storage';
+import { Download, Upload, Trash2, Sun, Moon, LogOut } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { exportToCsv, importFromCsv, clearAllData } from '../utils/db';
 
-export default function SettingsView({ onDataChange, darkMode, onToggleTheme }) {
+export default function SettingsView({ darkMode, onToggleTheme, onDataReload }) {
+  const { user, signOut } = useAuth();
   const [msg, setMsg] = useState('');
 
-  const handleExport = () => {
-    const csv = exportToCsv();
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `finance_data_${new Date().toISOString().split('T')[0]}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    setMsg('Data exported as CSV!');
+  const handleExport = async () => {
+    try {
+      const csv = await exportToCsv();
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `finance_data_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setMsg('Data exported as CSV!');
+    } catch {
+      setMsg('Export failed.');
+    }
     setTimeout(() => setMsg(''), 2000);
   };
 
@@ -26,13 +32,13 @@ export default function SettingsView({ onDataChange, darkMode, onToggleTheme }) 
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = (ev) => {
+      reader.onload = async (ev) => {
         try {
-          const data = importFromCsv(ev.target.result);
-          onDataChange(data);
+          await importFromCsv(ev.target.result);
+          await onDataReload();
           setMsg('CSV imported successfully!');
         } catch (err) {
-          setMsg('Error: ' + (err.message || 'Invalid CSV format.'));
+          setMsg('Error: ' + (err.message || 'Invalid CSV.'));
         }
         setTimeout(() => setMsg(''), 3000);
       };
@@ -41,19 +47,15 @@ export default function SettingsView({ onDataChange, darkMode, onToggleTheme }) 
     input.click();
   };
 
-  const handleClear = () => {
-    if (confirm('Are you sure? This will delete ALL your data (expenses and income).')) {
-      const fresh = {
-        expenses: [], incomes: [],
-        categories: [
-          'Insurance', 'Telecom', 'Utilities', 'Childcare', 'Fitness',
-          'Subscription', 'Energy', 'Building', 'Groceries', 'Food', 'Other'
-        ],
-        incomeCategories: ['Salary', 'Freelance', 'Investments', 'Rental', 'Bonus', 'Other'],
-      };
-      saveData(fresh);
-      onDataChange(fresh);
-      setMsg('All data cleared.');
+  const handleClear = async () => {
+    if (confirm('Are you sure? This will delete ALL your data.')) {
+      try {
+        await clearAllData();
+        await onDataReload();
+        setMsg('All data cleared.');
+      } catch {
+        setMsg('Failed to clear data.');
+      }
       setTimeout(() => setMsg(''), 2000);
     }
   };
@@ -61,6 +63,14 @@ export default function SettingsView({ onDataChange, darkMode, onToggleTheme }) 
   return (
     <div className="page">
       <h2>Settings</h2>
+
+      <div className="card">
+        <h3>Account</h3>
+        <p className="about-text" style={{ marginBottom: 10 }}>{user?.email}</p>
+        <button className="btn-danger full-width" onClick={signOut}>
+          <LogOut size={18} /> Sign Out
+        </button>
+      </div>
 
       <div className="card">
         <h3>Appearance</h3>
@@ -87,18 +97,9 @@ export default function SettingsView({ onDataChange, darkMode, onToggleTheme }) 
       </div>
 
       <div className="card">
-        <h3>CSV Format</h3>
-        <p className="about-text">
-          Export/import uses CSV with columns: type, name, amount, category, date.
-          Type is either "expense" or "income". Import adds to existing data.
-        </p>
-      </div>
-
-      <div className="card">
         <h3>About</h3>
         <p className="about-text">
-          Finance Tracker PWA. All data is stored locally on your device.
-          No server, no account required. Install on your home screen for the best experience.
+          Finance Tracker. Data is synced to the cloud and accessible from any device.
         </p>
       </div>
     </div>

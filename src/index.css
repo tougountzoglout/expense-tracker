@@ -561,3 +561,105 @@ body {
   font-size: 16px;
   font-weight: 700;
 }
+
+/* ===== LOGIN SCREEN ===== */
+.login-page {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--bg);
+}
+.login-container {
+  width: 100%;
+  max-width: 380px;
+}
+.login-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+.login-header h1 {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.login-header p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+.login-toggle {
+  display: flex;
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 4px;
+  margin-bottom: 16px;
+}
+.login-toggle-btn {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+}
+.login-toggle-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+.login-form {
+  background: var(--card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.login-error {
+  font-size: 12px;
+  color: var(--danger);
+  text-align: center;
+  padding: 8px;
+  background: rgba(192,57,43,0.08);
+  border-radius: 6px;
+}
+.login-info {
+  font-size: 12px;
+  color: var(--success);
+  text-align: center;
+  padding: 8px;
+  background: rgba(42,157,143,0.08);
+  border-radius: 6px;
+}
+
+/* Loading screen */
+.loading-screen {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

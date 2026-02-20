@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import NavBar from './components/NavBar';
 import Home from './components/Home';
 import Dashboard from './components/Dashboard';
@@ -6,12 +7,23 @@ import Averages from './components/Averages';
 import EntryManager from './components/EntryManager';
 import SavingsView from './components/SavingsView';
 import SettingsView from './components/SettingsView';
-import { loadData, addExpense, deleteExpense, addIncome, deleteIncome } from './utils/storage';
-import { seedIfEmpty } from './utils/seed';
+import LoginScreen from './components/LoginScreen';
+import { fetchExpenses, fetchIncomes, insertExpense, insertIncome, removeExpense, removeIncome } from './utils/db';
 
-export default function App() {
+const CATEGORIES = [
+  'Insurance', 'Telecom', 'Utilities', 'Childcare', 'Fitness',
+  'Subscription', 'Energy', 'Building', 'Groceries', 'Food', 'Other'
+];
+const INCOME_CATEGORIES = [
+  'Salary', 'Freelance', 'Investments', 'Rental', 'Bonus', 'Other'
+];
+
+function AppContent() {
+  const { user, loading: authLoading } = useAuth();
   const [page, setPage] = useState('home');
-  const [data, setData] = useState(() => seedIfEmpty());
+  const [expenses, setExpenses] = useState([]);
+  const [incomes, setIncomes] = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('expense_tracker_theme');
     return saved === 'dark';
@@ -22,12 +34,40 @@ export default function App() {
     localStorage.setItem('expense_tracker_theme', darkMode ? 'dark' : 'light');
   }, [darkMode]);
 
-  const refresh = () => setData(loadData());
+  const loadAll = useCallback(async () => {
+    if (!user) return;
+    setDataLoading(true);
+    try {
+      const [exp, inc] = await Promise.all([fetchExpenses(), fetchIncomes()]);
+      setExpenses(exp);
+      setIncomes(inc);
+    } catch (err) {
+      console.error('Failed to load data:', err.message);
+    } finally {
+      setDataLoading(false);
+    }
+  }, [user]);
 
-  const handleAddExpense = (e) => { addExpense(e); refresh(); };
-  const handleDeleteExpense = (id) => { deleteExpense(id); refresh(); };
-  const handleAddIncome = (i) => { addIncome(i); refresh(); };
-  const handleDeleteIncome = (id) => { deleteIncome(id); refresh(); };
+  useEffect(() => {
+    if (user) loadAll();
+  }, [user, loadAll]);
+
+  if (authLoading) {
+    return <div className="loading-screen"><div className="spinner" /><p>Loading...</p></div>;
+  }
+
+  if (!user) {
+    return <LoginScreen />;
+  }
+
+  if (dataLoading) {
+    return <div className="loading-screen"><div className="spinner" /><p>Loading your data...</p></div>;
+  }
+
+  const handleAddExpense = async (e) => { await insertExpense(e); await loadAll(); };
+  const handleDeleteExpense = async (id) => { await removeExpense(id); await loadAll(); };
+  const handleAddIncome = async (i) => { await insertIncome(i); await loadAll(); };
+  const handleDeleteIncome = async (id) => { await removeIncome(id); await loadAll(); };
 
   const navTab = ['home', 'dashboard', 'stats', 'settings'].includes(page) ? page : 'home';
 
@@ -39,60 +79,49 @@ export default function App() {
 
       <main className="app-main">
         {page === 'home' && (
-          <Home expenses={data.expenses} incomes={data.incomes} onNavigate={setPage} />
+          <Home expenses={expenses} incomes={incomes} onNavigate={setPage} />
         )}
-
         {page === 'expenses' && (
           <EntryManager
-            title="Expenses"
-            entries={data.expenses}
-            categories={data.categories}
-            onAdd={handleAddExpense}
-            onDelete={handleDeleteExpense}
-            type="expense"
-            onBack={() => setPage('home')}
+            title="Expenses" entries={expenses} categories={CATEGORIES}
+            onAdd={handleAddExpense} onDelete={handleDeleteExpense}
+            type="expense" onBack={() => setPage('home')}
           />
         )}
-
         {page === 'income' && (
           <EntryManager
-            title="Income"
-            entries={data.incomes}
-            categories={data.incomeCategories}
-            onAdd={handleAddIncome}
-            onDelete={handleDeleteIncome}
-            type="income"
-            accentClass="income-amount"
-            onBack={() => setPage('home')}
+            title="Income" entries={incomes} categories={INCOME_CATEGORIES}
+            onAdd={handleAddIncome} onDelete={handleDeleteIncome}
+            type="income" accentClass="income-amount" onBack={() => setPage('home')}
           />
         )}
-
         {page === 'savings' && (
-          <SavingsView
-            expenses={data.expenses}
-            incomes={data.incomes}
-            onBack={() => setPage('home')}
-          />
+          <SavingsView expenses={expenses} incomes={incomes} onBack={() => setPage('home')} />
         )}
-
         {page === 'dashboard' && (
-          <Dashboard expenses={data.expenses} incomes={data.incomes} />
+          <Dashboard expenses={expenses} incomes={incomes} />
         )}
-
         {page === 'stats' && (
-          <Averages expenses={data.expenses} incomes={data.incomes} />
+          <Averages expenses={expenses} incomes={incomes} />
         )}
-
         {page === 'settings' && (
           <SettingsView
-            onDataChange={setData}
             darkMode={darkMode}
             onToggleTheme={() => setDarkMode(!darkMode)}
+            onDataReload={loadAll}
           />
         )}
       </main>
 
       <NavBar active={navTab} onNavigate={setPage} />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
